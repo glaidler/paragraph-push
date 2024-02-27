@@ -1,0 +1,115 @@
+name: 'Paragraph Push Runner'
+description: 'Pushes updated code from github branch and sync with paragon project'
+inputs:
+  projectId:
+    type: string
+    required: false
+  paragonKey:
+    type: string
+    required: true
+  npmToken:
+    type: string
+    required: true
+  paragonZeusUrl:
+    type: string
+    required: true
+  paragonDashboardUrl:
+    type: string
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check for Paragon projectId
+      shell: bash
+      run: |
+        if [ -f .para/project.json ]; then
+          PROJECT_ID=$(jq -r 'projectId' .para/project.json)
+           echo "projectId found: $PROJECT_ID"
+        else
+          echo "projectId not found."
+          exit 1;
+        fi
+
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v4.0.1
+      with:
+        node-version: v18.17.1
+
+    - name: Install para CLI
+      shell: bash
+      run: |
+        echo "//registry.npmjs.org/:_authToken=${{ inputs.npmToken }}" > ~/.npmrc
+        npm install -g @useparagon/cli@0.0.1-canary.27
+
+    - name: Authenticate into CLI
+      env:
+        PARAGON_CLI_KEY: ${{ inputs.paragonKey }}
+        PARAGON_HOST_DASHBOARD: ${{ inputs.paragonDashboardUrl }}
+        PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
+      shell: bash
+      run: |
+        mkdir -p ~/.paragon
+        cat << EOF > ~/.paragon/credentials.json
+        {
+          "default": {
+            "profile": "default",
+            "token": "$PARAGON_CLI_KEY"
+          }
+        }
+        EOF
+        cat << EOF > ~/.paragon/profiles.json
+        {
+          "default": {
+            "name": "default",
+            "default": true,
+            "services": {
+              "zeus": "$PARAGON_HOST_ZEUS",
+              "dashboard": "$PARAGON_HOST_DASHBOARD"
+            }
+          }
+        }
+        EOF
+
+    - name: Build Paragraph project
+      shell: bash
+      run: |
+        para install
+        para build
+
+    - name: Push to Paragon
+      shell: bash
+      if: github.event_name == 'push'
+      run: para push
+
+    # Post steps
+    - name: Update success status in Paragon
+      shell: bash
+      env:
+        PROJECT_ID: $PROJECT_ID
+        PARAGON_CLI_KEY: ${{ inputs.paragonKey }}
+        PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
+      if: ${{ success() }}
+      run: |
+        echo "Commit succeeded!"
+        curl -X PATCH \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $PARAGON_CLI_KEY" \
+          -d "{ \"projectId\": \"$PROJECT_ID\", \"commitId\": \"$COMMIT_ID\", \"runId\": \"${{ github.run_id }}\", \"success\": true, \"hash\": \"${{ steps.commit.outputs.commit_hash }}\"  }" \
+          $PARAGON_HOST_ZEUS/graphite/projects/commit
+
+    - name: Update failed status in Paragon
+      shell: bash
+      env:
+        PARAGON_CLI_KEY: ${{ inputs.paragonKey }}
+        PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
+        PROJECT_ID: ${{ inputs.projectId }}
+        COMMIT_ID: ${{ inputs.commitId }}
+      if: ${{ failure() }}
+      run: |
+        echo "Commit failed!"
+        curl -X PATCH \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $PARAGON_CLI_KEY" \
+          -d "{ \"projectId\": \"$PROJECT_ID\", \"commitId\": \"$COMMIT_ID\", \"runId\": \"${{ github.run_id }}\", \"success\": false }" \
+          $PARAGON_HOST_ZEUS/graphite/projects/commit
