@@ -29,7 +29,7 @@ jobs:
           paragonDashboardUrl: ${{ secrets.DASHBOARD_URL }}
 ```
 
-Make sure to replace ${{ secrets.PARAGON_CLI_KEY }}, ${{ secrets.NPM_TOKEN }}, ${{ secrets.ZEUS_URL }}, and ${{ secrets.DASHBOARD_URL }} with your actual secrets. Also, ensure to use the correct version of the action (useparagon/paragraph-push@d8ecfd354fb9637dc58013e1a1e24b4f22b8809b in this example).
+Make sure to replace ${{ secrets.PARAGON_CLI_KEY }}, ${{ secrets.NPM_TOKEN }}, ${{ secrets.ZEUS_URL }}, and ${{ secrets.DASHBOARD_URL }} with your actual secrets. Also, ensure to use the correct version of the action.
 
 ## Inputs
 - paragonKey
