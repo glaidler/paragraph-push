@@ -114,5 +114,5 @@ runs:
         curl -X POST \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $PARAGON_CLI_KEY" \
-          -d "{ \"projectId\": \"$PROJECT_ID\", \"author\": \"$COMMIT_AUTHOR\", \"runId\": \"${{ github.run_id }}\", \"success\": false, \"hash\": \"${{ github.sha }}\"  }" }" \
+          -d "{ \"projectId\": \"$PROJECT_ID\", \"author\": \"$COMMIT_AUTHOR\", \"runId\": \"${{ github.run_id }}\", \"success\": false, \"hash\": \"${{ github.sha }}\"  }" \
           $PARAGON_HOST_ZEUS/graphite/projects/commit
