@@ -42,7 +42,7 @@ runs:
       shell: bash
       run: |
         echo "//registry.npmjs.org/:_authToken=${{ inputs.npmToken }}" > ~/.npmrc
-        npm install -g @useparagon/cli@0.0.1-canary.27
+        npm install -g @useparagon/cli@next
 
     - name: Authenticate into CLI
       env:
