@@ -1,5 +1,8 @@
 name: 'Paragraph Push Runner'
-description: 'Pushes updated code from github branch and sync with paragon project'
+description: 'Pushes updated code from GitHub to sync with Paragon.'
+branding:
+  icon: upload-cloud
+  color: gray-dark
 inputs:
   paragonKey:
     type: string
