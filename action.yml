@@ -1,9 +1,6 @@
 name: 'Paragraph Push Runner'
 description: 'Pushes updated code from github branch and sync with paragon project'
 inputs:
-  projectId:
-    type: string
-    required: false
   paragonKey:
     type: string
     required: true
@@ -20,17 +17,60 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Check for Paragon projectId
-      id: verifyProject
+    - name: Validate Paragon Git-sync Connection
+      id: validateGitSync
+      env:
+        PARAGON_CLI_KEY: ${{ inputs.paragonKey }}
+        PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
+        COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
       shell: bash
       run: |
-        if [ -f .para\/project.json ]; then
-          PROJECT_ID=$(jq -r '.projectId' .para\/project.json)
-          echo "projectId found: $PROJECT_ID"
-          echo "::set-output name=projectId::$PROJECT_ID"
-        else
-          echo "projectId not found."
-          exit 1;
+        request_output=$(curl -X POST \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $PARAGON_CLI_KEY" \
+          -d "{ \"branchName\": \"${{ github.ref_name }}\", \"author\": \"$COMMIT_AUTHOR\", \"runId\": \"${{ github.run_id }}\", \"hash\": \"${{ github.sha }}\"  }" \
+          $PARAGON_HOST_ZEUS/graphite/projects/commit)
+
+        commitId=$(echo "$request_output" | jq -r '.commitId')
+        projectId=$(echo "$request_output" | jq -r '.projectId')
+        subfolder=$(echo "$request_output" | jq -r '.subfolder')
+
+        echo "commitId=$commitId"   >> $GITHUB_OUTPUT
+        echo "projectId=$projectId" >> $GITHUB_OUTPUT
+        echo "subfolder=$subfolder" >> $GITHUB_OUTPUT
+
+    - name: Validate Dependency
+      id: validate
+      shell: bash
+      run: |
+        if [ "${{ steps.validateGitSync.outputs.projectId }}" = "null" ]; then
+          echo "projectId is not provided."
+          exit 1
+        fi
+          
+        if [ "${{ steps.validateGitSync.outputs.commitId }}" = "null" ]; then
+          echo "commitId is not provided."
+          exit 1
+        fi 
+
+        if [ -z "${{ inputs.paragonKey }}" ]; then
+          echo "paragonKey is not provided."
+          exit 1
+        fi 
+
+        if [ -z "${{ inputs.npmToken }}" ]; then
+          echo "npmToken is not provided."
+          exit 1
+        fi 
+
+        if [ -z "${{ inputs.paragonZeusUrl }}" ]; then
+          echo "paragonZeusUrl is not provided."
+          exit 1
+        fi 
+
+        if [ -z "${{ inputs.paragonDashboardUrl }}" ]; then
+          echo "paragonDashboardUrl is not provided."
+          exit 1
         fi
 
     - name: Setup Node.js environment
@@ -88,31 +128,31 @@ runs:
     - name: Update success status in Paragon
       shell: bash
       env:
-        PROJECT_ID: ${{ steps.verifyProject.outputs.projectId }}
         PARAGON_CLI_KEY: ${{ inputs.paragonKey }}
         PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
-        COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
+        PROJECT_ID: ${{ steps.validateGitSync.outputs.projectId }}
+        COMMIT_ID: ${{ steps.validateGitSync.outputs.commitId }}
       if: ${{ success() }}
       run: |
-        echo "Push succeeded!"
-        curl -X POST \
+        echo "Commit succeeded!"
+        curl -X PATCH \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $PARAGON_CLI_KEY" \
-          -d "{ \"projectId\": \"$PROJECT_ID\", \"author\": \"$COMMIT_AUTHOR\", \"runId\": \"${{ github.run_id }}\", \"success\": true, \"hash\": \"${{ github.sha }}\"  }" \
+          -d "{ \"projectId\": \"$PROJECT_ID\", \"commitId\": \"$COMMIT_ID\", \"runId\": \"${{ github.run_id }}\", \"success\": true, \"hash\": \"${{ github.sha }}\"  }" \
           $PARAGON_HOST_ZEUS/graphite/projects/commit
 
     - name: Update failed status in Paragon
       shell: bash
       env:
-        PROJECT_ID: ${{ steps.verifyProject.outputs.projectId }}
         PARAGON_CLI_KEY: ${{ inputs.paragonKey }}
         PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
-        COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
+        PROJECT_ID: ${{ steps.validateGitSync.outputs.projectId }}
+        COMMIT_ID: ${{ steps.validateGitSync.outputs.commitId }}
       if: ${{ failure() }}
       run: |
-        echo "Push failed!"
-        curl -X POST \
+        echo "Commit failed!"
+        curl -X PATCH \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $PARAGON_CLI_KEY" \
-          -d "{ \"projectId\": \"$PROJECT_ID\", \"author\": \"$COMMIT_AUTHOR\", \"runId\": \"${{ github.run_id }}\", \"success\": false, \"hash\": \"${{ github.sha }}\"  }" \
+          -d "{ \"projectId\": \"$PROJECT_ID\", \"commitId\": \"$COMMIT_ID\", \"runId\": \"${{ github.run_id }}\", \"success\": false }" \
           $PARAGON_HOST_ZEUS/graphite/projects/commit
