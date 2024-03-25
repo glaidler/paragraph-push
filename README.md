@@ -24,12 +24,11 @@ jobs:
         uses: useparagon/paragraph-push@v1
         with:
           paragonKey: ${{ secrets.PARAGON_CLI_KEY }}
-          npmToken: ${{ secrets.NPM_TOKEN }}
           paragonZeusUrl: ${{ secrets.ZEUS_URL }}
           paragonDashboardUrl: ${{ secrets.DASHBOARD_URL }}
 ```
 
-Make sure to replace ${{ secrets.PARAGON_CLI_KEY }}, ${{ secrets.NPM_TOKEN }}, ${{ secrets.ZEUS_URL }}, and ${{ secrets.DASHBOARD_URL }} with your actual secrets. Also, ensure to use the correct version of the action.
+Make sure to replace ${{ secrets.PARAGON_CLI_KEY }}, ${{ secrets.ZEUS_URL }}, and ${{ secrets.DASHBOARD_URL }} with your actual secrets. Also, ensure to use the correct version of the action.
 
 ## Inputs
 - paragonKey

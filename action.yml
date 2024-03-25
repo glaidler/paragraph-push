@@ -1,18 +1,20 @@
 name: 'Paragraph Push Runner'
-description: 'Pushes updated code from github branch and sync with paragon project'
+description: 'Pushes updated code from GitHub to sync with Paragon.'
+branding:
+  icon: upload-cloud
+  color: gray-dark
 inputs:
   paragonKey:
     type: string
     required: true
-  npmToken:
-    type: string
-    required: true
   paragonZeusUrl:
     type: string
-    required: true
+    required: false
+    default: https://zeus.useparagon.com
   paragonDashboardUrl:
     type: string
-    required: true
+    required: false
+    default: https://dashboard.useparagon.com
 
 runs:
   using: 'composite'
@@ -56,12 +58,7 @@ runs:
         if [ -z "${{ inputs.paragonKey }}" ]; then
           echo "paragonKey is not provided."
           exit 1
-        fi 
-
-        if [ -z "${{ inputs.npmToken }}" ]; then
-          echo "npmToken is not provided."
-          exit 1
-        fi 
+        fi
 
         if [ -z "${{ inputs.paragonZeusUrl }}" ]; then
           echo "paragonZeusUrl is not provided."
@@ -81,8 +78,7 @@ runs:
     - name: Install para CLI
       shell: bash
       run: |
-        echo "//registry.npmjs.org/:_authToken=${{ inputs.npmToken }}" > ~/.npmrc
-        npm install -g @useparagon/cli@0.0.1-canary.27
+        npm install -g @useparagon/cli
 
     - name: Authenticate into CLI
       env:
