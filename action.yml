@@ -76,7 +76,7 @@ runs:
     - name: Install para CLI
       shell: bash
       run: |
-        npm install -g @useparagon/cli
+        npm install --include=dev
 
     - name: Authenticate into CLI
       env:
@@ -110,13 +110,13 @@ runs:
     - name: Build Paragraph project
       shell: bash
       run: |
-        para install
-        para build
+        npx para install
+        npx para build
 
     - name: Push to Paragon
       shell: bash
       if: github.event_name == 'push' && steps.validate.outputs.valid == 'true'
-      run: para push
+      run: npx para push
 
     # Post steps
     - name: Update success status in Paragon
