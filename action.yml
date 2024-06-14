@@ -87,7 +87,6 @@ runs:
         echo "deps=$deps" >> $GITHUB_OUTPUT
 
     - name: Install para CLI
-      if: steps.checkProjectCLI.outputs.deps != '0'
       working-directory: ${{ inputs.path }}
       shell: bash
       run: |
